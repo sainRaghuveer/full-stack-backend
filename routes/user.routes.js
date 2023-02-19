@@ -1,0 +1,68 @@
+const express = require('express');
+const{UserModel}=require("../models/user.model")
+
+const bcrypt = require('bcrypt');
+const jwt=require('jsonwebtoken')
+
+
+const UserRoute=express.Router()
+
+
+UserRoute.post("/register", async(req,res)=>{
+   const{email,password}=req.body
+  try {
+    const isAlready=await UserModel.findOne({email})
+    if(isAlready){
+      res.send("Please login user is already registered")
+    }
+    else
+    {
+      bcrypt.hash(password, 5, async(err, hash) =>{
+        // Store hash in your password DB.
+        if(err){
+            res.send({"msg":"Enter valid email and password"})
+        }
+        else
+        { 
+            const user=new UserModel({email,password:hash})
+            user.save()
+            res.send({"msg":"User successfully registered"})
+        }
+    });
+    }
+    
+  } catch (error) {
+    res.send({"msg":error.message})
+  }
+ 
+})
+
+UserRoute.post("/login",async (req,res)=>{
+ const{email,password}=req.body;
+try {
+    const author=await UserModel.find({email})
+  if(author.length>0){
+    bcrypt.compare(password, author[0].password, function(err, result) {
+        if(result){
+            var token = jwt.sign({ author: author[0]._id }, 'book',{expiresIn:"3h"})
+            res.send({"msg":"Login Successful","token":token})
+        }
+        else
+        {
+            res.send({"msg":"wrong password"})
+        }
+    })
+  }
+  else
+  {
+    res.send({"msg":"Wrong email"})
+  }
+    
+} catch (error) {
+    res.send({"msg":error.message})
+}
+})
+
+module.exports={
+  UserRoute
+}
